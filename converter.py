@@ -41,10 +41,20 @@ def get_entity_tables(schema):
         elif isinstance(obj, dict):
             for key, value in obj.items():
                 search_object_types(value)
-        
 
     search_object_types(schema)
     return entity_tables
+
+def get_attributes(schema):
+    """Get the attributes from the schema"""
+    attributes = []
+
+    def search_attributes(obj):
+        """Search the schema for attributes"""
+        
+
+    search_attributes(schema)
+    return attributes
 
 
 
