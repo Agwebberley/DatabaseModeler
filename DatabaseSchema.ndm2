@@ -4520,6 +4520,27 @@
                     "sourceCardinality": "ZeroOrManyRelationship",
                     "targetCardinality": "OneAndOnlyOneRelationship",
                     "oldName": "Manufacture_manufacture_item_id_837185b2_fk_Items_items_id"
+                  },
+                  {
+                    "objectType": "ForeignKey_PGSQL",
+                    "name": "fk_Manufacture_manufacture_Manufacture_manufacturehistory_1",
+                    "fields": [
+                      "id"
+                    ],
+                    "referenceSchema": "public",
+                    "referenceTable": "Manufacture_manufacturehistory",
+                    "referenceFields": [
+                      "manufacture"
+                    ],
+                    "onDelete": "",
+                    "onUpdate": "",
+                    "comment": "",
+                    "isMatchFull": false,
+                    "isDeferrable": false,
+                    "isDeferred": false,
+                    "sourceCardinality": "ZeroOrManyRelationship",
+                    "targetCardinality": "OneAndOnlyOneRelationship",
+                    "oldName": ""
                   }
                 ],
                 "uniques": [],
@@ -5797,8 +5818,8 @@
           "type": "table",
           "schemaName": "public",
           "tableName": "Manufacture_manufacturehistory",
-          "x": 30,
-          "y": 1080,
+          "x": 800,
+          "y": 1060,
           "width": 255,
           "height": 170,
           "isBold": false,
@@ -5845,8 +5866,8 @@
           "type": "table",
           "schemaName": "public",
           "tableName": "Shared_logmessage",
-          "x": 360,
-          "y": 1080,
+          "x": 30,
+          "y": 1300,
           "width": 194,
           "height": 110,
           "isBold": false,
@@ -6434,6 +6455,40 @@
             "width": 445,
             "height": 30,
             "fontName": "Arial Unicode MS",
+            "fontSize": 14,
+            "fontColor": {
+              "r": 204,
+              "g": 204,
+              "b": 204,
+              "a": 1
+            },
+            "isFontBold": false,
+            "isFontItalic": false,
+            "isVisible": false
+          }
+        },
+        {
+          "name": "fk_Manufacture_manufacture_Manufacture_manufacturehistory_1",
+          "sourceTableName": "Manufacture_manufacture",
+          "sourceSchemaName": "public",
+          "lineWidth": 1,
+          "visible": true,
+          "vertices": [
+            {
+              "x": 940,
+              "y": 1025
+            },
+            {
+              "x": 940,
+              "y": 1045
+            }
+          ],
+          "label": {
+            "x": 469,
+            "y": 976,
+            "width": 473,
+            "height": 29,
+            "fontName": "Sans",
             "fontSize": 14,
             "fontColor": {
               "r": 204,
