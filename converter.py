@@ -117,6 +117,11 @@ def save_to_database(entity_tables, attributes, relationships):
     # Create the database
     conn = sqlite3.connect("ndm2.db")
     c = conn.cursor()
+    
+    # Clear the database
+    c.execute("DROP TABLE IF EXISTS entity_tables")
+    c.execute("DROP TABLE IF EXISTS attributes")
+    c.execute("DROP TABLE IF EXISTS relationships")
 
     # Create the tables
     c.execute("CREATE TABLE entity_tables (name text)")
@@ -131,7 +136,7 @@ def save_to_database(entity_tables, attributes, relationships):
             c.execute("INSERT INTO attributes VALUES (?, ?, ?, ?, ?, ?)", (table_name, attribute_name, attribute_details["type"], attribute_details.get("length"), attribute_details.get("decimal_places"), attribute_details.get("default_value")))
     for table_name, table_relationships in relationships.items():
         for relationship_name, relationship_details in table_relationships.items():
-            c.execute("INSERT INTO relationships VALUES (?, ?, ?, ?, ?)", (table_name, relationship_name, relationship_details["fields"], relationship_details["reference_table"], relationship_details["reference_fields"]))
+            c.execute("INSERT INTO relationships VALUES (?, ?, ?, ?, ?)", (table_name, relationship_name, str(relationship_details["fields"]), relationship_details["reference_table"], str(relationship_details["reference_fields"])))
 
     # Save the changes
     conn.commit()
@@ -147,6 +152,6 @@ def main():
     entity_tables = get_entity_tables(schema)
     attributes = get_attributes(schema)
     relationships = get_relationships(schema)
-    pretty_print_json(relationships)
+    save_to_database(entity_tables, attributes, relationships)
 
 main()
