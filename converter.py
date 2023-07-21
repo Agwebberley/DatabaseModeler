@@ -22,7 +22,7 @@ def get_schema():
     """Get the schema from the .ndm2 file"""
     with open("DatabaseSchema.ndm2", "r") as f:
         schema = json.load(f)
-    return schema
+    return schema   
 
 def get_entity_tables(schema):
     """Get the entity tables from the schema"""
@@ -124,19 +124,21 @@ def save_to_database(entity_tables, attributes, relationships):
     c.execute("DROP TABLE IF EXISTS relationships")
 
     # Create the tables
-    c.execute("CREATE TABLE entity_tables (name text)")
-    c.execute("CREATE TABLE attributes (table_name text, attribute_name text, attribute_type text, attribute_length integer, attribute_decimal_places integer, attribute_default_value text)")
-    c.execute("CREATE TABLE relationships (table_name text, relationship_name text, relationship_fields text, relationship_reference_table text, relationship_reference_fields text)")
+    c.execute("CREATE TABLE entity_tables (id INTEGER PRIMARY KEY, name TEXT)")
+    c.execute("CREATE TABLE attributes (id INTEGER PRIMARY KEY, table_id INTEGER, attribute_name TEXT, attribute_type TEXT, attribute_length INTEGER, attribute_decimal_places INTEGER, attribute_default_value TEXT, FOREIGN KEY(table_id) REFERENCES entity_tables(id))")
+    c.execute("CREATE TABLE relationships (id INTEGER PRIMARY KEY, table_id INTEGER, relationship_name TEXT, relationship_fields TEXT, relationship_reference_table TEXT, relationship_reference_fields TEXT, FOREIGN KEY(table_id) REFERENCES entity_tables(id))")
 
     # Insert the data
-    for entity_table in entity_tables:
-        c.execute("INSERT INTO entity_tables VALUES (?)", (entity_table,))
+    for i, entity_table in enumerate(entity_tables):
+        c.execute("INSERT INTO entity_tables VALUES (?, ?)", (i+1, entity_table))
     for table_name, table_attributes in attributes.items():
         for attribute_name, attribute_details in table_attributes.items():
-            c.execute("INSERT INTO attributes VALUES (?, ?, ?, ?, ?, ?)", (table_name, attribute_name, attribute_details["type"], attribute_details.get("length"), attribute_details.get("decimal_places"), attribute_details.get("default_value")))
+            table_id = c.execute("SELECT id FROM entity_tables WHERE name=?", (table_name,)).fetchone()[0]
+            c.execute("INSERT INTO attributes VALUES (?, ?, ?, ?, ?, ?, ?)", (None, table_id, attribute_name, attribute_details["type"], attribute_details.get("length"), attribute_details.get("decimal_places"), attribute_details.get("default_value"),))
     for table_name, table_relationships in relationships.items():
         for relationship_name, relationship_details in table_relationships.items():
-            c.execute("INSERT INTO relationships VALUES (?, ?, ?, ?, ?)", (table_name, relationship_name, str(relationship_details["fields"]), relationship_details["reference_table"], str(relationship_details["reference_fields"])))
+            table_id = c.execute("SELECT id FROM entity_tables WHERE name=?", (table_name,)).fetchone()[0]
+            c.execute("INSERT INTO relationships VALUES (?, ?, ?, ?, ?, ?)", (None, table_id, relationship_name, str(relationship_details["fields"]), relationship_details["reference_table"], str(relationship_details["reference_fields"]),))
 
     # Save the changes
     conn.commit()
