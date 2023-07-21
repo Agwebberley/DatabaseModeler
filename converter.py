@@ -65,8 +65,8 @@ def get_attributes(schema):
                             attributes[obj["name"]][field["name"]] = {"type": field["type"]}
                             if field.get("length"):
                                 attributes[obj["name"]][field["name"]]["length"] = field["length"]
-                            if field.get("decimalPlaces"):
-                                attributes[obj["name"]][field["name"]]["decimal_places"] = field["decimalPlaces"]
+                            if field.get("decimals") != -2147483648 and field.get("decimals") != 0:
+                                attributes[obj["name"]][field["name"]]["decimal_places"] = field["decimals"]
                             if field.get("defaultValue"):
                                 attributes[obj["name"]][field["name"]]["default_value"] = field["defaultValue"]  
             for value in obj.values():
