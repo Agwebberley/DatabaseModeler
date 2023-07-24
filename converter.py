@@ -165,6 +165,7 @@ def write_models():
     from django.db import models
     from django.urls import reverse
     from django.utils import timezone
+    \n\n
     """
 
     conn = sqlite3.connect("ndm2.db")
@@ -219,11 +220,15 @@ def write_models():
     if warning.lower() == "y":
         # Create the models.py files
         for app_name, classes in MODEL_APP_MAP.items():
-            # Create the file
-            with open(os.path.join(directory, "models.py"), "w") as f:
-                # Write the header
+            # Create the files
+            # Each app will have its own models.py file in a directory named after the app
+            # The directory will be in the directory specified by the user
+            # If the app directory does not exist, create it
+            # If there already is a models.py in the app directory, overwrite it
+            if not os.path.exists(os.path.join(directory, app_name)):
+                os.makedirs(os.path.join(directory, app_name))
+            with open(os.path.join(directory, app_name, "models.py"), "w") as f:
                 f.write(header)
-                # Write the classes
                 for class_string in classes:
                     f.write(class_string)
     else:
