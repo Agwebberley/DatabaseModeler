@@ -146,6 +146,93 @@ def save_to_database(entity_tables, attributes, relationships):
     # Close the connection
     conn.close()
 
+# Step 3: write the models.py file(s) based on the sqlite3 database
+def write_models():
+    TYPE_MAP = {
+        "int": "IntegerField",
+        "float": "FloatField",
+        "str": "CharField",
+        "date": "DateField",
+        "datetime": "DateTimeField",
+        "bool": "BooleanField",
+        "text": "TextField",
+        "decimal": "DecimalField",
+        "file": "FileField",
+        "image": "ImageField",
+    }
+    MODEL_APP_MAP = {}
+    header = """
+    from django.db import models
+    from django.urls import reverse
+    from django.utils import timezone
+    """
+
+    conn = sqlite3.connect("ndm2.db")
+    c = conn.cursor()
+
+    # Get the entity tables
+    entity_tables = c.execute("SELECT * FROM entity_tables").fetchall()
+
+    # Create each model class
+    for entity_table in entity_tables:
+        # Seperate the class and app name
+        # The format is appName_className
+        # Each app will have its own models.py file
+        app_name, class_name = entity_table[1].split("_")
+        # Create the class
+        class_string = f"class {class_name}(models.Model):\n"
+        # Get the attributes for the class
+        attributes = c.execute("SELECT * FROM attributes WHERE table_id=?", (entity_table[0],)).fetchall()
+        for attribute in attributes:
+            # Get the attribute name
+            attribute_name = attribute[2]
+            # Get the attribute type
+            attribute_type = attribute[3]
+            # Get the attribute length
+            attribute_length = attribute[4]
+            # Get the attribute decimal places
+            attribute_decimal_places = attribute[5]
+            # Get the attribute default value
+            attribute_default_value = attribute[6]
+            # Add the attribute to the class string
+            class_string += f"    {attribute_name} = models.{TYPE_MAP[attribute_type]}("
+            if attribute_length:
+                class_string += f"{attribute_length}"
+                if attribute_decimal_places:
+                    class_string += f", {attribute_decimal_places}"
+                class_string += ", "
+            if attribute_default_value:
+                class_string += f"{attribute_default_value}"
+            class_string += ")\n"
+        class_string += "\n\n"
+        
+        # Put the class in the MODEL_APP_MAP
+        if app_name not in MODEL_APP_MAP:
+            MODEL_APP_MAP[app_name] = []
+        MODEL_APP_MAP[app_name].append(class_string)
+    
+    # Create the models.py files
+    # Ask for the directory to save the files in
+    directory = input("Enter the directory to save the models.py files in: ")
+    warning = input("WARNING: This will overwrite any existing models.py files in the directory. Continue? (y/n): ")
+
+    if warning.lower() == "y":
+        # Create the models.py files
+        for app_name, classes in MODEL_APP_MAP.items():
+            # Create the file
+            with open(os.path.join(directory, "models.py"), "w") as f:
+                # Write the header
+                f.write(header)
+                # Write the classes
+                for class_string in classes:
+                    f.write(class_string)
+    else:
+        print("Aborting...")
+        sys.exit(0)
+
+
+
+
 
 
 def main():
