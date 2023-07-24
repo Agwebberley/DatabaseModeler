@@ -7,6 +7,9 @@ Step 1: Go through the schema and make a list of each:
     c. relationship
 Step 2: Save the lists to a sqlite3 database (for now) each in thier own table
 Step 3: write the models.py file(s) based on the sqlite3 database
+Step 4: Migrate the database
+Step 5: Add the relationships to the models.py file(s)
+Step 6: Migrate the database
 """
 import json
 import sqlite3
@@ -150,23 +153,27 @@ def save_to_database(entity_tables, attributes, relationships):
 def write_models():
     TYPE_MAP = {
         "int": "IntegerField",
+        "int4": "IntegerField",
+        "int8": "IntegerField",
         "float": "FloatField",
         "str": "CharField",
+        "varchar": "CharField",
         "date": "DateField",
         "datetime": "DateTimeField",
+        "timestamptz": "DateTimeField",
         "bool": "BooleanField",
         "text": "TextField",
         "decimal": "DecimalField",
+        "numeric": "DecimalField",
         "file": "FileField",
         "image": "ImageField",
     }
     MODEL_APP_MAP = {}
     header = """
-    from django.db import models
-    from django.urls import reverse
-    from django.utils import timezone
-    \n\n
-    """
+from django.db import models
+from django.urls import reverse
+from django.utils import timezone\n\n
+"""
 
     conn = sqlite3.connect("ndm2.db")
     c = conn.cursor()
@@ -179,11 +186,15 @@ def write_models():
         # Seperate the class and app name
         # The format is appName_className
         # Each app will have its own models.py file
-        app_name, class_name = entity_table[1].split("_")
+        # Split the string at the first underscore, ignore the any other underscores
+        app_name, class_name = entity_table[1].split("_", 1)
         # Create the class
         class_string = f"class {class_name}(models.Model):\n"
         # Get the attributes for the class
         attributes = c.execute("SELECT * FROM attributes WHERE table_id=?", (entity_table[0],)).fetchall()
+        # Get the relationships for the class
+        relationships = c.execute("SELECT * FROM relationships WHERE table_id=?", (entity_table[0],)).fetchall()
+
         for attribute in attributes:
             # Get the attribute name
             attribute_name = attribute[2]
@@ -198,13 +209,24 @@ def write_models():
             # Add the attribute to the class string
             class_string += f"    {attribute_name} = models.{TYPE_MAP[attribute_type]}("
             if attribute_length:
-                class_string += f"{attribute_length}"
+                class_string += f"max_length={attribute_length}"
                 if attribute_decimal_places:
-                    class_string += f", {attribute_decimal_places}"
+                    class_string += f", decimal_places={attribute_decimal_places}"
                 class_string += ", "
             if attribute_default_value:
-                class_string += f"{attribute_default_value}"
+                class_string += f"default={attribute_default_value}"
             class_string += ")\n"
+        for relationship in relationships:
+            # Get the relationship name
+            relationship_name = relationship[2]
+            # Get the relationship fields
+            relationship_fields = relationship[3]
+            # Get the relationship reference table
+            relationship_reference_table = relationship[4]
+            # Get the relationship reference fields
+            relationship_reference_fields = relationship[5]
+            # Add the relationship to the class string
+            class_string += f"    {relationship_name} = models.ForeignKey('{relationship_reference_table}', on_delete=models.CASCADE, related_name='{relationship_name}')\n"
         class_string += "\n\n"
         
         # Put the class in the MODEL_APP_MAP
@@ -237,11 +259,22 @@ def write_models():
     else:
         print("Aborting...")
         sys.exit(0)
+    return directory
 
 
+# Step 4 & 6: Migrate the database
+def migrate_database(directory):
+    # Use the django makemigrations and migrate commands
+    # Use the directory specified by the user
+    # If the directory does not contain a manage.py file,
+    # Inform the user and exit
+    if os.path.exists(os.path.join(directory, "manage.py")):
+        os.system(f"python {os.path.join(directory, 'manage.py')} makemigrations")
+        os.system(f"python {os.path.join(directory, 'manage.py')} migrate")
 
-
-
+# Step 5: Add the relationships to the models.py file(s)
+def add_relationships():
+    pass
 
 def main():
     """Main function"""
@@ -250,5 +283,15 @@ def main():
     attributes = get_attributes(schema)
     relationships = get_relationships(schema)
     save_to_database(entity_tables, attributes, relationships)
+    directory = write_models()
+
+    # Step 4:
+    migrate_database(directory)
+
+    # Step 5:
+    add_relationships()
+
+    # Step 6:
+    migrate_database(directory)
 
 main()
