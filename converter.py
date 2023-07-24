@@ -214,10 +214,13 @@ def write_models():
     
     # Create the models.py files
     # Ask for the directory to save the files in
-    directory = input("Enter the directory to save the models.py files in: ")
+    directory = input("Enter the directory to save the models.py files in (if empty will use current directory): ")
     warning = input("WARNING: This will overwrite any existing models.py files in the directory. Continue? (y/n): ")
 
     if warning.lower() == "y":
+        # If the directory is empty, use the current directory
+        if not directory:
+            directory = os.getcwd()
         # Create the models.py files
         for app_name, classes in MODEL_APP_MAP.items():
             # Create the files
