@@ -222,12 +222,14 @@ from django.utils import timezone\n\n
                 relationship_name = relationship[2]
                 # Get the relationship fields
                 relationship_fields = relationship[3]
+                relationship_field = relationship_fields[0]
                 # Get the relationship reference table
                 relationship_reference_table = relationship[4]
                 # Get the relationship reference fields
                 relationship_reference_fields = relationship[5]
+                
                 # Add the relationship to the class string
-                class_string += f"    {relationship_name} = models.ForeignKey('{relationship_reference_table}', on_delete=models.CASCADE, related_name='{relationship_name}')\n"
+                class_string += f"    {relationship_field} = models.ForeignKey('{relationship_reference_table}', on_delete=models.CASCADE, related_name='{relationship_field}')\n"
         class_string += "\n\n"
         
         # Put the class in the MODEL_APP_MAP
