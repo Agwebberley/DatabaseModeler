@@ -150,7 +150,7 @@ def save_to_database(entity_tables, attributes, relationships):
     conn.close()
 
 # Step 3: write the models.py file(s) based on the sqlite3 database
-def write_models():
+def write_models(relation=False):
     TYPE_MAP = {
         "int": "IntegerField",
         "int4": "IntegerField",
@@ -216,17 +216,18 @@ from django.utils import timezone\n\n
             if attribute_default_value:
                 class_string += f"default={attribute_default_value}"
             class_string += ")\n"
-        for relationship in relationships:
-            # Get the relationship name
-            relationship_name = relationship[2]
-            # Get the relationship fields
-            relationship_fields = relationship[3]
-            # Get the relationship reference table
-            relationship_reference_table = relationship[4]
-            # Get the relationship reference fields
-            relationship_reference_fields = relationship[5]
-            # Add the relationship to the class string
-            class_string += f"    {relationship_name} = models.ForeignKey('{relationship_reference_table}', on_delete=models.CASCADE, related_name='{relationship_name}')\n"
+        if relation:
+            for relationship in relationships:
+                # Get the relationship name
+                relationship_name = relationship[2]
+                # Get the relationship fields
+                relationship_fields = relationship[3]
+                # Get the relationship reference table
+                relationship_reference_table = relationship[4]
+                # Get the relationship reference fields
+                relationship_reference_fields = relationship[5]
+                # Add the relationship to the class string
+                class_string += f"    {relationship_name} = models.ForeignKey('{relationship_reference_table}', on_delete=models.CASCADE, related_name='{relationship_name}')\n"
         class_string += "\n\n"
         
         # Put the class in the MODEL_APP_MAP
@@ -272,9 +273,6 @@ def migrate_database(directory):
         os.system(f"python {os.path.join(directory, 'manage.py')} makemigrations")
         os.system(f"python {os.path.join(directory, 'manage.py')} migrate")
 
-# Step 5: Add the relationships to the models.py file(s)
-def add_relationships():
-    pass
 
 def main():
     """Main function"""
@@ -289,7 +287,7 @@ def main():
     migrate_database(directory)
 
     # Step 5:
-    add_relationships()
+    write_models(True)
 
     # Step 6:
     migrate_database(directory)
