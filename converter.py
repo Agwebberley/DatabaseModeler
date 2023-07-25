@@ -11,6 +11,12 @@ Step 4: Migrate the database
 Step 5: Add the relationships to the models.py file(s)
 Step 6: Migrate the database
 """
+
+"""
+TODO: Support unique, not null, blank
+TODO: Support ManyToManyField
+TODO: Support OneToOneField
+"""
 import json
 import sqlite3
 import os
