@@ -15,7 +15,9 @@ Step 6: Migrate the database
 """
 TODO: Support unique, not null, blank
 TODO: Support ManyToManyField
+      The ManyToManyField will be modeled as a separate table with two ForeignKey fields to the two tables
 TODO: Support OneToOneField
+TODO: Support Changes to the schema (Currently a nuclear option is used)
 """
 import json
 import sqlite3
