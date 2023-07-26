@@ -10,6 +10,7 @@ Step 3: write the models.py file(s) based on the sqlite3 database
 Step 4: Migrate the database
 Step 5: Add the relationships to the models.py file(s)
 Step 6: Migrate the database
+Step 7: Generate the forms.py file(s) based on the models.py file(s)
 """
 
 """
@@ -17,6 +18,9 @@ TODO: Support unique
 TODO: Support null, blank ✔
 TODO: Support OneToOneField ✔
 TODO: Support Changes to the schema (Currently a nuclear option is used)
+TODO: Generate the forms.py file(s)
+TODO: Support relationships with the forms.py file(s)
+TODO: Support other Input types in the forms.py file(s)
 """
 import json
 import sqlite3
@@ -295,6 +299,64 @@ def migrate_database(directory):
         os.system(f"python {os.path.join(directory, 'manage.py')} makemigrations")
         os.system(f"python {os.path.join(directory, 'manage.py')} migrate")
 
+
+def generate_forms(directory):
+    """
+from django import forms
+from .models import Customers
+
+class CustomerForm(forms.ModelForm):
+    class Meta:
+        model = Customers
+        fields = ('name', 'billing_address', 'shipping_address', 'phone', 'email')
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'}),
+            'billing_address': forms.TextInput(attrs={'class': 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'}),
+            'shipping_address': forms.TextInput(attrs={'class': 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'}),
+            'phone': forms.TextInput(attrs={'class': 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'}),
+            'email': forms.EmailInput(attrs={'class': 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'})
+        }
+
+
+    """
+    HEADER = """
+from django import forms
+"""
+    CSS_CLASSES = "w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black"
+
+    # For every model, create a form inside the forms.py file in the app directory
+    # The form will be named ModelNameForm
+    # The form will have a Meta class with the model and fields
+    # Each field will have a widget with the CSS_CLASSES
+
+    c = sqlite3.connect("ndm2.db").cursor()
+    entity_tables = c.execute("SELECT * FROM entity_tables").fetchall()
+
+    for entity_table in entity_tables:
+        # Seperate the class and app name
+        # The format is appName_className
+        # Each app will have its own models.py file
+        # Split the string at the first underscore, ignore the any other underscores
+        app_name, class_name = entity_table[1].split("_", 1)
+        # Create the form
+        form_string = f"class {class_name}Form(forms.ModelForm):\n"
+        # Get the attributes for the class
+        attributes = c.execute("SELECT * FROM attributes WHERE table_id=?", (entity_table[0],)).fetchall()
+
+        form_string += "    class Meta:\n"
+        # Import the model
+        form_string += f"        from .models import {class_name}\n"
+        form_string += f"        model = {class_name}\n"
+        form_string += "        fields = ("
+        for attribute in attributes:
+            form_string += f"'{attribute[2]}', "
+        form_string = form_string[:-2]
+        form_string += ")\n"
+        form_string += "        widgets = {\n"
+        for attribute in attributes:
+            form_string += f"            '{attribute[2]}': forms.TextInput(attrs={{'class': '{CSS_CLASSES}'}}),\n"
+        form_string += "        }\n\n"
+        
 
 def main():
     """Main function"""
