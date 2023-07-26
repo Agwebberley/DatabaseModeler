@@ -16,7 +16,7 @@ Step 6: Migrate the database
 TODO: Support unique, not null, blank
 TODO: Support ManyToManyField
       The ManyToManyField will be modeled as a separate table with two ForeignKey fields to the two tables
-TODO: Support OneToOneField
+TODO: Support OneToOneField ✔
 TODO: Support Changes to the schema (Currently a nuclear option is used)
 """
 import json
@@ -107,7 +107,7 @@ def get_relationships(schema):
                     if foreign_key["objectType"] == "ForeignKey_PGSQL":
                         if obj["name"] not in relationships:
                             relationships[obj["name"]] = {}
-                        relationships[obj["name"]][foreign_key["name"]] = {"fields": foreign_key["fields"], "reference_table": foreign_key["referenceTable"], "reference_fields": foreign_key["referenceFields"]}
+                        relationships[obj["name"]][foreign_key["name"]] = {"fields": foreign_key["fields"], "reference_table": foreign_key["referenceTable"], "reference_fields": foreign_key["referenceFields"], "cardinality": foreign_key["sourceCardinality"]}
             for value in obj.values():
                 search_relationships(value)
         elif isinstance(obj, list):
@@ -235,9 +235,16 @@ from django.utils import timezone\n\n
                 relationship_reference_table = relationship[4]
                 # Get the relationship reference fields
                 relationship_reference_fields = relationship[5]
-                
+                # Get the cardinality of the relationship
+                relationship_cardinality = relationship[6]
+
+                if relationship_cardinality == "ZeroOrOneRelationship":
+                    relationship_cardinality = "OneToOneField"
+                else:
+                    relationship_cardinality = "ForeignKey"
+
                 # Add the relationship to the class string
-                class_string += f"    {relationship_field} = models.ForeignKey('{relationship_reference_table}', on_delete=models.CASCADE, related_name='{relationship_field}')\n"
+                class_string += f"    {relationship_field} = models.{relationship_cardinality}('{relationship_reference_table}', on_delete=models.CASCADE, related_name='{relationship_field}')\n"
         class_string += "\n\n"
         
         # Put the class in the MODEL_APP_MAP
