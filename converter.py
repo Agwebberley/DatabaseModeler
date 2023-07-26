@@ -13,9 +13,8 @@ Step 6: Migrate the database
 """
 
 """
-TODO: Support unique, not null, blank
-TODO: Support ManyToManyField
-      The ManyToManyField will be modeled as a separate table with two ForeignKey fields to the two tables
+TODO: Support unique
+TODO: Support null, blank ✔
 TODO: Support OneToOneField ✔
 TODO: Support Changes to the schema (Currently a nuclear option is used)
 """
@@ -79,7 +78,9 @@ def get_attributes(schema):
                             if field.get("decimals") != -2147483648 and field.get("decimals") != 0:
                                 attributes[obj["name"]][field["name"]]["decimal_places"] = field["decimals"]
                             if field.get("defaultValue"):
-                                attributes[obj["name"]][field["name"]]["default_value"] = field["defaultValue"]  
+                                attributes[obj["name"]][field["name"]]["default_value"] = field["defaultValue"]
+                            if field.get("IsNullable"):
+                                attributes[obj["name"]][field["name"]]["IsNullable"] = field["IsNullable"] 
             for value in obj.values():
                 search_attributes(value)
         elif isinstance(obj, list):
@@ -136,7 +137,7 @@ def save_to_database(entity_tables, attributes, relationships):
 
     # Create the tables
     c.execute("CREATE TABLE entity_tables (id INTEGER PRIMARY KEY, name TEXT)")
-    c.execute("CREATE TABLE attributes (id INTEGER PRIMARY KEY, table_id INTEGER, attribute_name TEXT, attribute_type TEXT, attribute_length INTEGER, attribute_decimal_places INTEGER, attribute_default_value TEXT, FOREIGN KEY(table_id) REFERENCES entity_tables(id))")
+    c.execute("CREATE TABLE attributes (id INTEGER PRIMARY KEY, table_id INTEGER, attribute_name TEXT, attribute_type TEXT, attribute_length INTEGER, attribute_decimal_places INTEGER, attribute_default_value TEXT, null TEXT, FOREIGN KEY(table_id) REFERENCES entity_tables(id))")
     c.execute("CREATE TABLE relationships (id INTEGER PRIMARY KEY, table_id INTEGER, relationship_name TEXT, relationship_fields TEXT, relationship_reference_table TEXT, relationship_reference_fields TEXT, FOREIGN KEY(table_id) REFERENCES entity_tables(id))")
 
     # Insert the data
@@ -145,7 +146,7 @@ def save_to_database(entity_tables, attributes, relationships):
     for table_name, table_attributes in attributes.items():
         for attribute_name, attribute_details in table_attributes.items():
             table_id = c.execute("SELECT id FROM entity_tables WHERE name=?", (table_name,)).fetchone()[0]
-            c.execute("INSERT INTO attributes VALUES (?, ?, ?, ?, ?, ?, ?)", (None, table_id, attribute_name, attribute_details["type"], attribute_details.get("length"), attribute_details.get("decimal_places"), attribute_details.get("default_value"),))
+            c.execute("INSERT INTO attributes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (None, table_id, attribute_name, attribute_details["type"], attribute_details.get("length"), attribute_details.get("decimal_places"), attribute_details.get("default_value"), attribute_details.get("IsNullable")))
     for table_name, table_relationships in relationships.items():
         for relationship_name, relationship_details in table_relationships.items():
             table_id = c.execute("SELECT id FROM entity_tables WHERE name=?", (table_name,)).fetchone()[0]
@@ -214,6 +215,8 @@ from django.utils import timezone\n\n
             attribute_decimal_places = attribute[5]
             # Get the attribute default value
             attribute_default_value = attribute[6]
+            # Get the attribute null
+            attribute_null = attribute[7]
             # Add the attribute to the class string
             class_string += f"    {attribute_name} = models.{TYPE_MAP[attribute_type]}("
             if attribute_length:
@@ -222,7 +225,9 @@ from django.utils import timezone\n\n
                     class_string += f", decimal_places={attribute_decimal_places}"
                 class_string += ", "
             if attribute_default_value:
-                class_string += f"default={attribute_default_value}"
+                class_string += f"default={attribute_default_value}, "
+            if attribute_null == "true":
+                class_string += "null=true, blank=true"
             class_string += ")\n"
         if relation:
             for relationship in relationships:
