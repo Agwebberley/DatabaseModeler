@@ -21,6 +21,7 @@ TODO: Support Changes to the schema (Currently a nuclear option is used)
 TODO: Generate the forms.py file(s) ✔
 TODO: Support relationships with the forms.py file(s)
 TODO: Support other Input types in the forms.py file(s)
+TODO: Add class Meta, def save() & def __str__() to each of the models ✔
 """
 import json
 import sqlite3
@@ -254,6 +255,16 @@ from django.utils import timezone\n\n
 
                 # Add the relationship to the class string
                 class_string += f"    {relationship_field} = models.{relationship_cardinality}('{relationship_reference_table}', on_delete=models.CASCADE, related_name='{relationship_field}')\n"
+        
+        # Add the Meta class to the class string
+        class_string += f"\n    class Meta:\n        app_label = '{app_name}'\n\n"
+
+        # Add the __str__ method to the class string
+        class_string += f"    def __str__(self):\n        return str(self.pk)\n\n"
+
+        # add the save method to the class string
+        class_string += f"    def save(self, *args, **kwargs):\n        super().save(*args, **kwargs)\n\n"
+
         class_string += "\n\n"
         
         # Put the class in the MODEL_APP_MAP
