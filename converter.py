@@ -320,9 +320,11 @@ class CustomerForm(forms.ModelForm):
 
     """
     HEADER = """
-from django import forms
+from django import forms\n\n
 """
     CSS_CLASSES = "w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black"
+
+    MODEL_APP_MAP = {}
 
     # For every model, create a form inside the forms.py file in the app directory
     # The form will be named ModelNameForm
@@ -356,6 +358,28 @@ from django import forms
         for attribute in attributes:
             form_string += f"            '{attribute[2]}': forms.TextInput(attrs={{'class': '{CSS_CLASSES}'}}),\n"
         form_string += "        }\n\n"
+
+        # Put the form in the MODEL_APP_MAP
+        if app_name not in MODEL_APP_MAP:
+            MODEL_APP_MAP[app_name] = []
+        MODEL_APP_MAP[app_name].append(form_string)
+
+    # Create the forms.py files
+    # Use the directory specified by the user
+    # If the directory is empty, use the current directory
+
+    for app in MODEL_APP_MAP:
+        # Create the files
+        # Each app will have its own forms.py file in a directory named after the app
+        # The directory will be in the directory specified by the user
+        # If the app directory does not exist, create it
+        # If there already is a forms.py in the app directory, overwrite it
+        if not os.path.exists(os.path.join(directory, app)):
+            os.makedirs(os.path.join(directory, app))
+        with open(os.path.join(directory, app, "forms.py"), "w") as f:
+            f.write(HEADER)
+            for form_string in MODEL_APP_MAP[app]:
+                f.write(form_string)
         
 
 def main():
