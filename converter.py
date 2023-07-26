@@ -18,7 +18,7 @@ TODO: Support unique
 TODO: Support null, blank ✔
 TODO: Support OneToOneField ✔
 TODO: Support Changes to the schema (Currently a nuclear option is used)
-TODO: Generate the forms.py file(s)
+TODO: Generate the forms.py file(s) ✔
 TODO: Support relationships with the forms.py file(s)
 TODO: Support other Input types in the forms.py file(s)
 """
