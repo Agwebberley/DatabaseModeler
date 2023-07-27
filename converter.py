@@ -19,8 +19,8 @@ TODO: Support null, blank ✔
 TODO: Support OneToOneField ✔
 TODO: Support Changes to the schema (Currently a nuclear option is used)
 TODO: Generate the forms.py file(s) ✔
-TODO: Support relationships with the forms.py file(s)
-TODO: Support other Input types in the forms.py file(s)
+TODO: Support relationships with the forms.py file(s) ✔
+TODO: Support other Input types in the forms.py file(s) ✔
 TODO: Add class Meta, def save() & def __str__() to each of the models ✔
 """
 import json
@@ -337,6 +337,24 @@ from django import forms\n\n
 
     MODEL_APP_MAP = {}
 
+    FORM_INPUT_MAP = {
+        "int": "IntegerField",
+        "int4": "IntegerField",
+        "int8": "IntegerField",
+        "float": "FloatField",
+        "str": "CharField",
+        "varchar": "CharField",
+        "date": "DateField",
+        "datetime": "DateTimeField",
+        "timestamptz": "DateTimeField",
+        "bool": "BooleanField",
+        "text": "TextField",
+        "decimal": "DecimalField",
+        "numeric": "DecimalField",
+        "file": "FileField",
+        "image": "ImageField",
+    }
+
     # For every model, create a form inside the forms.py file in the app directory
     # The form will be named ModelNameForm
     # The form will have a Meta class with the model and fields
@@ -355,6 +373,8 @@ from django import forms\n\n
         form_string = f"class {class_name}Form(forms.ModelForm):\n"
         # Get the attributes for the class
         attributes = c.execute("SELECT * FROM attributes WHERE table_id=?", (entity_table[0],)).fetchall()
+        # Get the relationships for the class
+        relationships = c.execute("SELECT * FROM relationships WHERE table_id=?", (entity_table[0],)).fetchall()
 
         form_string += "    class Meta:\n"
         # Import the model
@@ -367,7 +387,9 @@ from django import forms\n\n
         form_string += ")\n"
         form_string += "        widgets = {\n"
         for attribute in attributes:
-            form_string += f"            '{attribute[2]}': forms.TextInput(attrs={{'class': '{CSS_CLASSES}'}}),\n"
+            form_string += f"            '{attribute[2]}': forms.{FORM_INPUT_MAP[attribute[3]]}(attrs={{'class': '{CSS_CLASSES}'}}),\n"
+        for relationship in relationships:
+            form_string += f"            '{relationship[2]}': forms.ChoiceField(attrs={{'class': '{CSS_CLASSES}'}}),\n"
         form_string += "        }\n\n"
 
         # Put the form in the MODEL_APP_MAP
