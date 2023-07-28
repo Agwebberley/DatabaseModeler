@@ -188,6 +188,7 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone\n\n
 """
+    IMPORTS = {}
 
     conn = sqlite3.connect("ndm2.db")
     c = conn.cursor()
@@ -256,7 +257,9 @@ from django.utils import timezone\n\n
                     relationship_cardinality = "ForeignKey"
 
                 # Add the relationship to the class string
-                class_string += f"    {relationship_field} = models.{relationship_cardinality}('{relationship_reference_table}', on_delete=models.CASCADE, related_name='{relationship_field}')\n"
+                # Import the model if it is not in the same app
+                
+                class_string += f"    {relationship_field} = models.{relationship_cardinality}('{relationship_reference_table.split('_', 1)[1]}', on_delete=models.CASCADE, related_name='{relationship_field}')\n"
         
         # Add the Meta class to the class string
         class_string += f"\n    class Meta:\n        app_label = '{app_name}'\n\n"
@@ -273,6 +276,15 @@ from django.utils import timezone\n\n
         if app_name not in MODEL_APP_MAP:
             MODEL_APP_MAP[app_name] = []
         MODEL_APP_MAP[app_name].append(class_string)
+
+        if relation:
+            if app_name not in IMPORTS:
+                IMPORTS[app_name] = []
+            for relationship in relationships:
+                import_str = f"from {relationship[4].split('_', 1)[0]}.models import {relationship[4].split('_', 1)[1]}\n"
+                if import_str not in IMPORTS[app_name]:
+                    IMPORTS[app_name].append(import_str)
+
     
     # Create the models.py files
 
@@ -290,6 +302,9 @@ from django.utils import timezone\n\n
             os.makedirs(os.path.join(directory, app_name))
         with open(os.path.abspath(os.path.join(directory, app_name, "models.py")), "w") as f:
             f.write(header)
+            if app_name in IMPORTS:
+                for import_string in IMPORTS[app_name]:
+                    f.write(import_string)
             for class_string in classes:
                 f.write(class_string)
     
