@@ -316,45 +316,30 @@ def generate_forms(directory):
 from django import forms
 from .models import Customers
 
-class CustomerForm(forms.ModelForm):
+class BaseForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'
+
+class CustomerForm(BaseForm):
     class Meta:
         model = Customers
         fields = ('name', 'billing_address', 'shipping_address', 'phone', 'email')
-        widgets = {
-            'name': forms.TextInput(attrs={'class': 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'}),
-            'billing_address': forms.TextInput(attrs={'class': 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'}),
-            'shipping_address': forms.TextInput(attrs={'class': 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'}),
-            'phone': forms.TextInput(attrs={'class': 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'}),
-            'email': forms.EmailInput(attrs={'class': 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'})
-        }
 
 
     """
     HEADER = """
-from django import forms\n\n
+from django import forms\n
+class BaseForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black'
+\n
 """
-    CSS_CLASSES = "w-half px-3 py-2 mb-4 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none sm:text-sm text-black"
-
     MODEL_APP_MAP = {}
-
-    FORM_INPUT_MAP = {
-        "int": "IntegerField",
-        "int4": "IntegerField",
-        "int8": "IntegerField",
-        "float": "FloatField",
-        "str": "CharField",
-        "varchar": "CharField",
-        "date": "DateField",
-        "datetime": "DateTimeField",
-        "timestamptz": "DateTimeField",
-        "bool": "BooleanField",
-        "text": "TextField",
-        "decimal": "DecimalField",
-        "numeric": "DecimalField",
-        "file": "FileField",
-        "image": "ImageField",
-    }
-
+    
     # For every model, create a form inside the forms.py file in the app directory
     # The form will be named ModelNameForm
     # The form will have a Meta class with the model and fields
@@ -384,14 +369,8 @@ from django import forms\n\n
         for attribute in attributes:
             form_string += f"'{attribute[2]}', "
         form_string = form_string[:-2]
-        form_string += ")\n"
-        form_string += "        widgets = {\n"
-        for attribute in attributes:
-            form_string += f"            '{attribute[2]}': forms.{FORM_INPUT_MAP[attribute[3]]}(attrs={{'class': '{CSS_CLASSES}'}}),\n"
-        for relationship in relationships:
-            form_string += f"            '{relationship[2]}': forms.ChoiceField(attrs={{'class': '{CSS_CLASSES}'}}),\n"
-        form_string += "        }\n\n"
-
+        form_string += ")\n\n"
+        
         # Put the form in the MODEL_APP_MAP
         if app_name not in MODEL_APP_MAP:
             MODEL_APP_MAP[app_name] = []
