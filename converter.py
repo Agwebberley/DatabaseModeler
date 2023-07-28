@@ -190,6 +190,10 @@ from django.utils import timezone\n\n
 """
     IMPORTS = {}
 
+    # DEPENDS is a dictionary that keeps track of the dependencies between the models that are in the same app
+    # Since parent models need to be created before child models
+    DEPENDS = {}
+
     conn = sqlite3.connect("ndm2.db")
     c = conn.cursor()
 
@@ -245,6 +249,13 @@ from django.utils import timezone\n\n
                 # Get the relationship reference table
                 relationship_reference_table = relationship[4]
                 relationship_field = relationship_reference_table.split("_", 1)[1]
+                # If the relationship reference table is in the same app, add it to the depends dictionary
+                if relationship_reference_table.split("_", 1)[0] == app_name:
+                    if app_name not in DEPENDS:
+                        DEPENDS[app_name] = []
+                    if class_name not in DEPENDS[app_name]:
+                        DEPENDS[app_name].append({class_name: []})
+                    DEPENDS[app_name][class_name].append(relationship_reference_table.split("_", 1)[1])
                 # Get the relationship reference fields
                 relationship_reference_fields = relationship[5]
                 
@@ -259,7 +270,7 @@ from django.utils import timezone\n\n
                 # Add the relationship to the class string
                 # Import the model if it is not in the same app
                 
-                class_string += f"    {relationship_field} = models.{relationship_cardinality}('{relationship_reference_table.split('_', 1)[1]}', on_delete=models.CASCADE, related_name='{relationship_field}')\n"
+                class_string += f"    {relationship_field} = models.{relationship_cardinality}({relationship_reference_table.split('_', 1)[1]}, on_delete=models.CASCADE, related_name='{relationship_field}')\n"
         
         # Add the Meta class to the class string
         class_string += f"\n    class Meta:\n        app_label = '{app_name}'\n\n"
@@ -281,9 +292,10 @@ from django.utils import timezone\n\n
             if app_name not in IMPORTS:
                 IMPORTS[app_name] = []
             for relationship in relationships:
-                import_str = f"from {relationship[4].split('_', 1)[0]}.models import {relationship[4].split('_', 1)[1]}\n"
-                if import_str not in IMPORTS[app_name]:
-                    IMPORTS[app_name].append(import_str)
+                if relationship[4].split('_', 1)[0] != app_name:
+                    import_str = f"from {relationship[4].split('_', 1)[0]}.models import {relationship[4].split('_', 1)[1]}\n"
+                    if import_str not in IMPORTS[app_name]:
+                        IMPORTS[app_name].append(import_str)
 
     
     # Create the models.py files
@@ -292,6 +304,35 @@ from django.utils import timezone\n\n
     if not directory:
         directory = os.getcwd()
     # Create the models.py files
+
+    if relation:
+        # Rearrange the MODEL_APP_MAP so that the parent models are created first
+        # This is done by using the DEPENDS dictionary
+        for app_name, depends_list in DEPENDS.items():
+            # Create a dictionary to hold the new order of the classes
+            new_order = {}
+            # Create a list to hold the classes that have dependencies
+            dependent_classes = []
+            # Loop through the depends_list and add the classes to the new_order dictionary
+            for depends_dict in depends_list:
+                for class_name, dependencies in depends_dict.items():
+                    # If the class has no dependencies, add it to the new_order dictionary
+                    if not dependencies:
+                        new_order[class_name] = MODEL_APP_MAP[app_name].pop(MODEL_APP_MAP[app_name].index(next(filter(lambda x: x.startswith(f"class {class_name}"), MODEL_APP_MAP[app_name]))))
+                    # If the class has dependencies, add it to the dependent_classes list
+                    else:
+                        dependent_classes.append(class_name)
+            # Loop through the dependent_classes list and add the classes to the new_order dictionary
+            while dependent_classes:
+                for class_name in dependent_classes:
+                    dependencies = next(filter(lambda x: x.startswith(f"class {class_name}"), MODEL_APP_MAP[app_name])).split("(")[1].split(")")[0].split(", ")
+                    # If all of the dependencies are in the new_order dictionary, add the class to the new_order dictionary
+                    if all(dependency in new_order for dependency in dependencies):
+                        new_order[class_name] = MODEL_APP_MAP[app_name].pop(MODEL_APP_MAP[app_name].index(next(filter(lambda x: x.startswith(f"class {class_name}"), MODEL_APP_MAP[app_name]))))
+                        dependent_classes.remove(class_name)
+            # Add the classes in the new order to the MODEL_APP_MAP
+            MODEL_APP_MAP[app_name] = list(new_order.values()) + MODEL_APP_MAP[app_name]
+
     for app_name, classes in MODEL_APP_MAP.items():
         # Create the files
         # Each app will have its own models.py file in a directory named after the app
