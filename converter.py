@@ -74,7 +74,7 @@ def get_attributes(schema):
             if obj.get("objectType") == "TableNormal_PGSQL":
                 for field in obj["fields"]:
                     if field["objectType"] == "TableField_PGSQL":
-                        if field["name"] != "pk":
+                        if field["name"] != "pk" and field["name"] != "id":
                             if obj["name"] not in attributes:
                                 attributes[obj["name"]] = {}
                             attributes[obj["name"]][field["name"]] = {"type": field["type"]}
@@ -243,9 +243,10 @@ from django.utils import timezone\n\n
                 
                 # Get the relationship reference table
                 relationship_reference_table = relationship[4]
+                relationship_field = relationship_reference_table.split("_", 1)[1]
                 # Get the relationship reference fields
                 relationship_reference_fields = relationship[5]
-                relationship_field = json.loads(relationship_reference_fields)[0]
+                
                 # Get the cardinality of the relationship
                 relationship_cardinality = relationship[6]
 
@@ -305,7 +306,7 @@ def migrate_database(directory):
         os.system(f"python {os.path.join(directory, 'manage.py')} migrate")
 
 
-def generate_forms(directory):
+def generate_forms(directory, relation=False):
     """
 from django import forms
 from .models import Customers
@@ -361,8 +362,12 @@ class BaseForm(forms.ModelForm):
         form_string += "        fields = ("
         for attribute in attributes:
             form_string += f"'{attribute[2]}', "
-        for relationship in relationships:
-            form_string += f"'{relationship[2]}', "
+        if relation:
+            for relationship in relationships:
+                # Get the relationship reference table
+                relationship_reference_table = relationship[4]
+                relationship_field = relationship_reference_table.split("_", 1)[1]
+                form_string += f"'{relationship_field}', "
         form_string = form_string[:-2]
         form_string += ")\n\n"
         
@@ -411,10 +416,14 @@ def main():
     # Step 4:
     migrate_database(directory)
 
+    
+
     # Step 5:
     write_models(relation=True, directory=directory)
 
     # Step 6:
     migrate_database(directory)
+
+    generate_forms(directory, relation=True)
 
 main()
