@@ -343,7 +343,6 @@ class BaseForm(forms.ModelForm):
     # For every model, create a form inside the forms.py file in the app directory
     # The form will be named ModelNameForm
     # The form will have a Meta class with the model and fields
-    # Each field will have a widget with the CSS_CLASSES
 
     c = sqlite3.connect("ndm2.db").cursor()
     entity_tables = c.execute("SELECT * FROM entity_tables").fetchall()
@@ -368,6 +367,8 @@ class BaseForm(forms.ModelForm):
         form_string += "        fields = ("
         for attribute in attributes:
             form_string += f"'{attribute[2]}', "
+        for relationship in relationships:
+            form_string += f"'{relationship[2]}', "
         form_string = form_string[:-2]
         form_string += ")\n\n"
         
