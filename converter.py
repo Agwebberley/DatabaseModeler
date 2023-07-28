@@ -164,7 +164,7 @@ def save_to_database(entity_tables, attributes, relationships):
     conn.close()
 
 # Step 3: write the models.py file(s) based on the sqlite3 database
-def write_models(relation=False):
+def write_models(relation=False, directory=""):
     TYPE_MAP = {
         "int": "IntegerField",
         "int4": "IntegerField",
@@ -240,11 +240,12 @@ from django.utils import timezone\n\n
                 relationship_name = relationship[2]
                 # Get the relationship fields
                 relationship_fields = relationship[3]
-                relationship_field = relationship_fields[0]
+                
                 # Get the relationship reference table
                 relationship_reference_table = relationship[4]
                 # Get the relationship reference fields
                 relationship_reference_fields = relationship[5]
+                relationship_field = json.loads(relationship_reference_fields)[0]
                 # Get the cardinality of the relationship
                 relationship_cardinality = relationship[6]
 
@@ -273,31 +274,24 @@ from django.utils import timezone\n\n
         MODEL_APP_MAP[app_name].append(class_string)
     
     # Create the models.py files
-    # Ask for the directory to save the files in
-    directory = input("Enter the directory to save the models.py files in (if empty will use current directory): ")
-    warning = input("WARNING: This will overwrite any existing models.py files in the directory. Continue? (y/n): ")
 
-    if warning.lower() == "y":
-        # If the directory is empty, use the current directory
-        if not directory:
-            directory = os.getcwd()
-        # Create the models.py files
-        for app_name, classes in MODEL_APP_MAP.items():
-            # Create the files
-            # Each app will have its own models.py file in a directory named after the app
-            # The directory will be in the directory specified by the user
-            # If the app directory does not exist, create it
-            # If there already is a models.py in the app directory, overwrite it
-            if not os.path.exists(os.path.join(directory, app_name)):
-                os.makedirs(os.path.join(directory, app_name))
-            with open(os.path.join(directory, app_name, "models.py"), "w") as f:
-                f.write(header)
-                for class_string in classes:
-                    f.write(class_string)
-    else:
-        print("Aborting...")
-        sys.exit(0)
-    return directory
+    # If the directory is empty, use the current directory
+    if not directory:
+        directory = os.getcwd()
+    # Create the models.py files
+    for app_name, classes in MODEL_APP_MAP.items():
+        # Create the files
+        # Each app will have its own models.py file in a directory named after the app
+        # The directory will be in the directory specified by the user
+        # If the app directory does not exist, create it
+        # If there already is a models.py in the app directory, overwrite it
+        if not os.path.exists(os.path.join(directory, app_name)):
+            os.makedirs(os.path.join(directory, app_name))
+        with open(os.path.abspath(os.path.join(directory, app_name, "models.py")), "w") as f:
+            f.write(header)
+            for class_string in classes:
+                f.write(class_string)
+    
 
 
 # Step 4 & 6: Migrate the database
@@ -397,18 +391,28 @@ class BaseForm(forms.ModelForm):
 
 def main():
     """Main function"""
+
+    # Ask for the directory to save the files in
+    directory = input("Enter the directory to save the models.py files in (if empty will use current directory): ")
+    warning = input("WARNING: This will overwrite any existing models.py files in the directory. Continue? (y/n): ")
+    if warning.lower() != "y":
+        sys.exit()
+    
     schema = get_schema()
     entity_tables = get_entity_tables(schema)
     attributes = get_attributes(schema)
     relationships = get_relationships(schema)
     save_to_database(entity_tables, attributes, relationships)
-    directory = write_models()
+
+    generate_forms(directory)
+
+    write_models(directory=directory)
 
     # Step 4:
     migrate_database(directory)
 
     # Step 5:
-    write_models(True)
+    write_models(relation=True, directory=directory)
 
     # Step 6:
     migrate_database(directory)
