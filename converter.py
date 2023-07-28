@@ -142,8 +142,8 @@ def save_to_database(entity_tables, attributes, relationships):
 
     # Create the tables
     c.execute("CREATE TABLE entity_tables (id INTEGER PRIMARY KEY, name TEXT)")
-    c.execute("CREATE TABLE attributes (id INTEGER PRIMARY KEY, table_id INTEGER, attribute_name TEXT, attribute_type TEXT, attribute_length INTEGER, attribute_decimal_places INTEGER, attribute_default_value TEXT, null TEXT, FOREIGN KEY(table_id) REFERENCES entity_tables(id))")
-    c.execute("CREATE TABLE relationships (id INTEGER PRIMARY KEY, table_id INTEGER, relationship_name TEXT, relationship_fields TEXT, relationship_reference_table TEXT, relationship_reference_fields TEXT, FOREIGN KEY(table_id) REFERENCES entity_tables(id))")
+    c.execute("CREATE TABLE attributes (id INTEGER PRIMARY KEY, table_id INTEGER, attribute_name TEXT, attribute_type TEXT, attribute_length INTEGER, attribute_decimal_places INTEGER, attribute_default_value TEXT, null_ TEXT, FOREIGN KEY(table_id) REFERENCES entity_tables(id))")
+    c.execute("CREATE TABLE relationships (id INTEGER PRIMARY KEY, table_id INTEGER, relationship_name TEXT, relationship_fields TEXT, relationship_reference_table TEXT, relationship_reference_fields TEXT, relationship_cardinality TEXT, FOREIGN KEY(table_id) REFERENCES entity_tables(id))")
 
     # Insert the data
     for i, entity_table in enumerate(entity_tables):
@@ -155,7 +155,7 @@ def save_to_database(entity_tables, attributes, relationships):
     for table_name, table_relationships in relationships.items():
         for relationship_name, relationship_details in table_relationships.items():
             table_id = c.execute("SELECT id FROM entity_tables WHERE name=?", (table_name,)).fetchone()[0]
-            c.execute("INSERT INTO relationships VALUES (?, ?, ?, ?, ?, ?)", (None, table_id, relationship_name, str(relationship_details["fields"]), relationship_details["reference_table"], str(relationship_details["reference_fields"]),))
+            c.execute("INSERT INTO relationships VALUES (?, ?, ?, ?, ?, ?, ?)", (None, table_id, relationship_name, str(relationship_details["fields"]), relationship_details["reference_table"], str(relationship_details["reference_fields"]), relationship_details["cardinality"]))
 
     # Save the changes
     conn.commit()
