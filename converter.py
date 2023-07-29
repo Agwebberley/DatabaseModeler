@@ -74,7 +74,7 @@ def get_attributes(schema):
             if obj.get("objectType") == "TableNormal_PGSQL":
                 for field in obj["fields"]:
                     if field["objectType"] == "TableField_PGSQL":
-                        if field["name"] != "pk" and field["name"] != "id":
+                        if field["name"] != "pk" and field["name"] != "id" and field["name"][-3:] != "_id":
                             if obj["name"] not in attributes:
                                 attributes[obj["name"]] = {}
                             attributes[obj["name"]][field["name"]] = {"type": field["type"]}
@@ -252,9 +252,9 @@ from django.utils import timezone\n\n
                 # If the relationship reference table is in the same app, add it to the depends dictionary
                 if relationship_reference_table.split("_", 1)[0] == app_name:
                     if app_name not in DEPENDS:
-                        DEPENDS[app_name] = []
+                        DEPENDS[app_name] = {}
                     if class_name not in DEPENDS[app_name]:
-                        DEPENDS[app_name].append({class_name: []})
+                        DEPENDS[app_name][class_name] = []
                     DEPENDS[app_name][class_name].append(relationship_reference_table.split("_", 1)[1])
                 # Get the relationship reference fields
                 relationship_reference_fields = relationship[5]
@@ -305,33 +305,56 @@ from django.utils import timezone\n\n
         directory = os.getcwd()
     # Create the models.py files
 
-    if relation:
-        # Rearrange the MODEL_APP_MAP so that the parent models are created first
-        # This is done by using the DEPENDS dictionary
-        for app_name, depends_list in DEPENDS.items():
-            # Create a dictionary to hold the new order of the classes
-            new_order = {}
-            # Create a list to hold the classes that have dependencies
-            dependent_classes = []
-            # Loop through the depends_list and add the classes to the new_order dictionary
-            for depends_dict in depends_list:
-                for class_name, dependencies in depends_dict.items():
-                    # If the class has no dependencies, add it to the new_order dictionary
-                    if not dependencies:
-                        new_order[class_name] = MODEL_APP_MAP[app_name].pop(MODEL_APP_MAP[app_name].index(next(filter(lambda x: x.startswith(f"class {class_name}"), MODEL_APP_MAP[app_name]))))
-                    # If the class has dependencies, add it to the dependent_classes list
-                    else:
-                        dependent_classes.append(class_name)
-            # Loop through the dependent_classes list and add the classes to the new_order dictionary
-            while dependent_classes:
-                for class_name in dependent_classes:
-                    dependencies = next(filter(lambda x: x.startswith(f"class {class_name}"), MODEL_APP_MAP[app_name])).split("(")[1].split(")")[0].split(", ")
-                    # If all of the dependencies are in the new_order dictionary, add the class to the new_order dictionary
-                    if all(dependency in new_order for dependency in dependencies):
-                        new_order[class_name] = MODEL_APP_MAP[app_name].pop(MODEL_APP_MAP[app_name].index(next(filter(lambda x: x.startswith(f"class {class_name}"), MODEL_APP_MAP[app_name]))))
-                        dependent_classes.remove(class_name)
-            # Add the classes in the new order to the MODEL_APP_MAP
-            MODEL_APP_MAP[app_name] = list(new_order.values()) + MODEL_APP_MAP[app_name]
+    def rearrange_models(app_name, classes, rearranged_classes, dependencies, visited):
+        """
+        Rearranges the classes in the MODEL_APP_MAP so that the parent models are created first.
+        """
+        # Loop through each class in the app
+        for class_string in classes:
+            # Get the class name
+            class_name = class_string.split("\n")[0].split(" ")[1].split("(")[0]
+            # Get the dependencies for this class
+            class_dependencies = dependencies.get(class_name, [])
+            # Loop through the dependencies and add them to the rearranged classes list
+            for dependency in class_dependencies:
+                if dependency not in visited:
+                    visited.add(dependency)
+                    for c in classes:
+                        if c.startswith(f"class {dependency}(") and c not in rearranged_classes:
+                            rearrange_models(app_name, classes, rearranged_classes, dependencies, visited)
+                            rearranged_classes.append(c)
+            # Add the current class to the rearranged classes list
+            if class_string not in rearranged_classes:
+                rearranged_classes.append(class_string)
+
+    def rearrange_MODEL_APP_MAP(MODEL_APP_MAP, DEPENDS):
+        """
+        Rearranges the MODEL_APP_MAP so that the parent models are created first.
+        """
+        # Create a new dictionary to hold the rearranged MODEL_APP_MAP
+        rearranged_MODEL_APP_MAP = {}
+
+        # Loop through each app in the MODEL_APP_MAP
+        for app_name, classes in MODEL_APP_MAP.items():
+            # Create a new list to hold the rearranged classes
+            rearranged_classes = []
+            # Create a new dictionary to hold the dependencies for this app
+            dependencies = DEPENDS.get(app_name, {})
+            visited = set()
+            rearrange_models(app_name, classes, rearranged_classes, dependencies, visited)
+            # Add the rearranged classes to the rearranged_MODEL_APP_MAP
+            rearranged_MODEL_APP_MAP[app_name] = rearranged_classes
+
+        # Update the MODEL_APP_MAP with the rearranged_MODEL_APP_MAP
+        MODEL_APP_MAP = rearranged_MODEL_APP_MAP
+
+        # Remove duplicates from the rearranged_MODEL_APP_MAP
+        for app_name, classes in MODEL_APP_MAP.items():
+            MODEL_APP_MAP[app_name] = list(set(classes))
+
+        return MODEL_APP_MAP
+    
+    MODEL_APP_MAP = rearrange_MODEL_APP_MAP(MODEL_APP_MAP, DEPENDS)
 
     for app_name, classes in MODEL_APP_MAP.items():
         # Create the files
