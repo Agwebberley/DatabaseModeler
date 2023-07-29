@@ -22,12 +22,14 @@ TODO: Generate the forms.py file(s) ✔
 TODO: Support relationships with the forms.py file(s) ✔
 TODO: Support other Input types in the forms.py file(s) ✔
 TODO: Add class Meta, def save() & def __str__() to each of the models ✔
+TODO: Sort the models based on dependencies ✔
 """
 import json
 import sqlite3
 import os
 import sys
 
+from toposort import get_dependency_order
 
 # Step 1: Go through the schema and make a list of each:
 #     a. Entity Table
@@ -214,6 +216,11 @@ from django.utils import timezone\n\n
         # Get the relationships for the class
         relationships = c.execute("SELECT * FROM relationships WHERE table_id=?", (entity_table[0],)).fetchall()
 
+        if app_name not in DEPENDS:
+            DEPENDS[app_name] = {}
+        if class_name not in DEPENDS[app_name]:
+            DEPENDS[app_name][class_name] = []
+
         for attribute in attributes:
             # Get the attribute name
             attribute_name = attribute[2]
@@ -251,10 +258,6 @@ from django.utils import timezone\n\n
                 relationship_field = relationship_reference_table.split("_", 1)[1]
                 # If the relationship reference table is in the same app, add it to the depends dictionary
                 if relationship_reference_table.split("_", 1)[0] == app_name:
-                    if app_name not in DEPENDS:
-                        DEPENDS[app_name] = {}
-                    if class_name not in DEPENDS[app_name]:
-                        DEPENDS[app_name][class_name] = []
                     DEPENDS[app_name][class_name].append(relationship_reference_table.split("_", 1)[1])
                 # Get the relationship reference fields
                 relationship_reference_fields = relationship[5]
@@ -303,59 +306,46 @@ from django.utils import timezone\n\n
     # If the directory is empty, use the current directory
     if not directory:
         directory = os.getcwd()
+
+    def sort_model_app_map(model_app_map, depends):
+        print(model_app_map)
+        """
+        The function to sort the MODEL_APP_MAP dictionary based on the dependencies.
+
+        Args:
+        model_app_map: The MODEL_APP_MAP dictionary to sort.
+        depends: The DEPENDS dictionary representing dependencies.
+        """
+
+        # Get the dependency order
+        dependency_order = get_dependency_order(depends)
+
+        # Prepare a dictionary for quick access to class names.
+        class_name_dict = {}
+        for app, classes in model_app_map.items():
+            for class_content in classes:
+                class_name = class_content.split("(")[0].split(" ")[1]
+                class_name_dict[class_name] = class_content
+
+        # Prepare the sorted dictionary.
+        sorted_dict = {}
+        for class_name in dependency_order:
+            if class_name in class_name_dict:
+                app_name = next(app for app, classes in model_app_map.items() if class_name_dict[class_name] in classes)
+                if app_name in sorted_dict:
+                    sorted_dict[app_name].append(class_name_dict[class_name])
+                else:
+                    sorted_dict[app_name] = [class_name_dict[class_name]]
+
+        return sorted_dict
+
+    if relation:
+        MODEL_APP_MAP = sort_model_app_map(MODEL_APP_MAP, DEPENDS)
+        # Reverse the order of the classes in each app
+        MODEL_APP_MAP = {app: classes[::-1] for app, classes in MODEL_APP_MAP.items()}
+
+
     # Create the models.py files
-
-    def rearrange_models(app_name, classes, rearranged_classes, dependencies, visited):
-        """
-        Rearranges the classes in the MODEL_APP_MAP so that the parent models are created first.
-        """
-        # Loop through each class in the app
-        for class_string in classes:
-            # Get the class name
-            class_name = class_string.split("\n")[0].split(" ")[1].split("(")[0]
-            # Get the dependencies for this class
-            class_dependencies = dependencies.get(class_name, [])
-            # Loop through the dependencies and add them to the rearranged classes list
-            for dependency in class_dependencies:
-                if dependency not in visited:
-                    visited.add(dependency)
-                    for c in classes:
-                        if c.startswith(f"class {dependency}(") and c not in rearranged_classes:
-                            rearrange_models(app_name, classes, rearranged_classes, dependencies, visited)
-                            rearranged_classes.append(c)
-            # Add the current class to the rearranged classes list
-            if class_string not in rearranged_classes:
-                rearranged_classes.append(class_string)
-
-    def rearrange_MODEL_APP_MAP(MODEL_APP_MAP, DEPENDS):
-        """
-        Rearranges the MODEL_APP_MAP so that the parent models are created first.
-        """
-        # Create a new dictionary to hold the rearranged MODEL_APP_MAP
-        rearranged_MODEL_APP_MAP = {}
-
-        # Loop through each app in the MODEL_APP_MAP
-        for app_name, classes in MODEL_APP_MAP.items():
-            # Create a new list to hold the rearranged classes
-            rearranged_classes = []
-            # Create a new dictionary to hold the dependencies for this app
-            dependencies = DEPENDS.get(app_name, {})
-            visited = set()
-            rearrange_models(app_name, classes, rearranged_classes, dependencies, visited)
-            # Add the rearranged classes to the rearranged_MODEL_APP_MAP
-            rearranged_MODEL_APP_MAP[app_name] = rearranged_classes
-
-        # Update the MODEL_APP_MAP with the rearranged_MODEL_APP_MAP
-        MODEL_APP_MAP = rearranged_MODEL_APP_MAP
-
-        # Remove duplicates from the rearranged_MODEL_APP_MAP
-        for app_name, classes in MODEL_APP_MAP.items():
-            MODEL_APP_MAP[app_name] = list(set(classes))
-
-        return MODEL_APP_MAP
-    
-    MODEL_APP_MAP = rearrange_MODEL_APP_MAP(MODEL_APP_MAP, DEPENDS)
-
     for app_name, classes in MODEL_APP_MAP.items():
         # Create the files
         # Each app will have its own models.py file in a directory named after the app
