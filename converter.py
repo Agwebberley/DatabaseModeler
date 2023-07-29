@@ -86,8 +86,8 @@ def get_attributes(schema):
                                 attributes[obj["name"]][field["name"]]["decimal_places"] = field["decimals"]
                             if field.get("defaultValue"):
                                 attributes[obj["name"]][field["name"]]["default_value"] = field["defaultValue"]
-                            if field.get("IsNullable"):
-                                attributes[obj["name"]][field["name"]]["IsNullable"] = field["IsNullable"] 
+                            if field.get("isNullable"):
+                                attributes[obj["name"]][field["name"]]["isNullable"] = field["isNullable"] 
             for value in obj.values():
                 search_attributes(value)
         elif isinstance(obj, list):
@@ -153,7 +153,7 @@ def save_to_database(entity_tables, attributes, relationships):
     for table_name, table_attributes in attributes.items():
         for attribute_name, attribute_details in table_attributes.items():
             table_id = c.execute("SELECT id FROM entity_tables WHERE name=?", (table_name,)).fetchone()[0]
-            c.execute("INSERT INTO attributes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (None, table_id, attribute_name, attribute_details["type"], attribute_details.get("length"), attribute_details.get("decimal_places"), attribute_details.get("default_value"), attribute_details.get("IsNullable")))
+            c.execute("INSERT INTO attributes VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (None, table_id, attribute_name, attribute_details["type"], attribute_details.get("length"), attribute_details.get("decimal_places"), attribute_details.get("default_value"), attribute_details.get("isNullable")))
     for table_name, table_relationships in relationships.items():
         for relationship_name, relationship_details in table_relationships.items():
             table_id = c.execute("SELECT id FROM entity_tables WHERE name=?", (table_name,)).fetchone()[0]
@@ -237,14 +237,20 @@ from django.utils import timezone\n\n
             # Add the attribute to the class string
             class_string += f"    {attribute_name} = models.{TYPE_MAP[attribute_type]}("
             if attribute_length:
-                class_string += f"max_length={attribute_length}"
+                if TYPE_MAP[attribute_type] == "DecimalField":
+                    class_string += f"max_digits={attribute_length}, "
+                elif TYPE_MAP[attribute_type] == "IntegerField":
+                    pass
+                else:
+                    class_string += f"max_length={attribute_length}, "
                 if attribute_decimal_places:
-                    class_string += f", decimal_places={attribute_decimal_places}"
-                class_string += ", "
+                    if class_string[-2:] == ", ":
+                        class_string = class_string[:-2]
+                    class_string += f", decimal_places={attribute_decimal_places}, "
             if attribute_default_value:
                 class_string += f"default={attribute_default_value}, "
-            if attribute_null == "true":
-                class_string += "null=true, blank=true"
+            if attribute_null == '1':
+                class_string += "null=True, blank=True"
             class_string += ")\n"
         if relation:
             for relationship in relationships:
