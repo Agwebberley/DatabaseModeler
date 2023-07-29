@@ -272,8 +272,14 @@ from django.utils import timezone\n\n
 
                 # Add the relationship to the class string
                 # Import the model if it is not in the same app
+
+                related_name = ', related_name="' + class_name + '"'
+
+                if relationship_reference_table.split("_", 1)[0] == app_name:
+                    related_name = ', related_name="_' + class_name + '"'
+
                 
-                class_string += f"    {relationship_field} = models.{relationship_cardinality}({relationship_reference_table.split('_', 1)[1]}, on_delete=models.CASCADE, related_name='{relationship_field}')\n"
+                class_string += f"    {relationship_field} = models.{relationship_cardinality}({relationship_reference_table.split('_', 1)[1]}, on_delete=models.CASCADE{related_name})\n"
         
         # Add the Meta class to the class string
         class_string += f"\n    class Meta:\n        app_label = '{app_name}'\n\n"
@@ -308,7 +314,6 @@ from django.utils import timezone\n\n
         directory = os.getcwd()
 
     def sort_model_app_map(model_app_map, depends):
-        print(model_app_map)
         """
         The function to sort the MODEL_APP_MAP dictionary based on the dependencies.
 
@@ -437,7 +442,6 @@ class BaseForm(forms.ModelForm):
                 relationship_reference_table = relationship[4]
                 relationship_field = relationship_reference_table.split("_", 1)[1]
                 form_string += f"'{relationship_field}', "
-        form_string = form_string[:-2]
         form_string += ")\n\n"
         
         # Put the form in the MODEL_APP_MAP
