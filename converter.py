@@ -24,6 +24,8 @@ TODO: Support other Input types in the forms.py file(s) ✔
 TODO: Add class Meta, def save() & def __str__() to each of the models ✔
 TODO: Sort the models based on dependencies ✔
 TODO: Add created_at and updated_at to each model & ignore them in the forms.py file(s) ✔
+TODO: If the attribute starts with a underscore, ignore it in the forms.py file(s)
+TODO: If a table has a atrribute named _str=* then use what is in the * as the __str__ method
 """
 import json
 import sqlite3
