@@ -376,13 +376,22 @@ from django.utils import timezone\n\n
 
 
 # Step 4 & 6: Migrate the database
-def migrate_database(directory):
+def migrate_database(directory, entity_tables=[]):
+    # Get the name of all the apps
+    apps = []
+    for app in entity_tables:
+        apps.append(app.split("_", 1)[0])
+    apps = list(set(apps))
+    app_string = ""
+    for app in apps:
+        app_string += f"{app} "
+
     # Use the django makemigrations and migrate commands
     # Use the directory specified by the user
     # If the directory does not contain a manage.py file,
     # Inform the user and exit
     if os.path.exists(os.path.join(directory, "manage.py")):
-        os.system(f"python {os.path.join(directory, 'manage.py')} makemigrations")
+        os.system(f"python {os.path.join(directory, 'manage.py')} makemigrations " + app_string)
         os.system(f"python {os.path.join(directory, 'manage.py')} migrate")
 
 
@@ -493,7 +502,7 @@ def main():
     write_models(directory=directory)
 
     # Step 4:
-    migrate_database(directory)
+    migrate_database(directory, entity_tables)
 
     
 
