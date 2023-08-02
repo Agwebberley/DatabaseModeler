@@ -23,6 +23,7 @@ TODO: Support relationships with the forms.py file(s) ✔
 TODO: Support other Input types in the forms.py file(s) ✔
 TODO: Add class Meta, def save() & def __str__() to each of the models ✔
 TODO: Sort the models based on dependencies ✔
+TODO: Add created_at and updated_at to each model & ignore them in the forms.py file(s) ✔
 """
 import json
 import sqlite3
@@ -76,7 +77,7 @@ def get_attributes(schema):
             if obj.get("objectType") == "TableNormal_PGSQL":
                 for field in obj["fields"]:
                     if field["objectType"] == "TableField_PGSQL":
-                        if field["name"] != "pk" and field["name"] != "id" and field["name"][-3:] != "_id":
+                        if field["name"] != "pk" and field["name"] != "id" and field["name"][-3:] != "_id" and field["name"] != "created_at" and field["name"] != "updated_at":
                             if obj["name"] not in attributes:
                                 attributes[obj["name"]] = {}
                             attributes[obj["name"]][field["name"]] = {"type": field["type"]}
@@ -287,6 +288,10 @@ from django.utils import timezone\n\n
                 
                 class_string += f"    {relationship_field} = models.{relationship_cardinality}({relationship_reference_table.split('_', 1)[1]}, on_delete=models.CASCADE{related_name})\n"
         
+        # Add created_at and updated_at to each model
+        class_string += f"    created_at = models.DateTimeField(auto_now_add=True)\n"
+        class_string += f"    updated_at = models.DateTimeField(default=auto_now=True)\n"
+
         # Add the Meta class to the class string
         class_string += f"\n    class Meta:\n        app_label = '{app_name}'\n\n"
 
