@@ -42,9 +42,6 @@ import tkinter
 from toposort import get_dependency_order
 
 
-
-
-
 class Converter(tk.CTk):
     def __init__(self):
         super().__init__()
