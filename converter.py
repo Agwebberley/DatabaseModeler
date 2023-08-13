@@ -134,6 +134,9 @@ class Converter(tk.CTk):
 
         # Step 7:
         self.views_gui(entity_tables, directory)
+
+        # Step 8:
+        self.generate_urls(directory)
     
     # Step 1: Go through the schema and make a list of each:
     #     a. Entity Table
